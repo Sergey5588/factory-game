@@ -1,0 +1,16 @@
+.{
+    .name = .factory_game,
+    .version = "0.15.1",
+    .dependencies = .{
+        .sdl = .{
+            .url = "git+https://github.com/allyourcodebase/SDL3.git#49b390e5893a6771a540a0c0627c35048f582b1d",
+            .hash = "sdl-0.0.0-i4QD0Sd_qQCx4k3m1bIv8RWsiIcFbpwen77dr-D9KOoa",
+        },
+        .zflecs = .{
+            .url = "git+https://github.com/zig-gamedev/zflecs#631b46c4a284ad093c6963c45737d1568edddf71",
+            .hash = "zflecs-0.2.0-dev-1PN3yg0OQQD8uFm8oLV-Bt-7rJGD8oTCso_X4i3dMmFm",
+        },
+    },
+    .paths = .{""},
+    .fingerprint = 0x5c42f2430e5535a6,
+}
