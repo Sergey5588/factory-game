@@ -38,7 +38,7 @@ pub fn build(b: *std.Build) void {
     });  
   
     exe.root_module.addIncludePath(b.path("vendor"));  
-    exe.root_module.addIncludePath(flecs_dep.path("include"));
+    exe.root_module.addIncludePath(flecs_dep.path("libs/flecs"));
     // Link the built-from-source SDL3
     exe.root_module.linkLibrary(sdl_dep.artifact("SDL3"));  
     // flecs
