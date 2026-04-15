@@ -52,7 +52,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     AppState *state = (AppState*)SDL_calloc(1, sizeof(AppState));
     if (!state) return SDL_APP_FAILURE;
     *appstate = state;
-
+	state->cam.zoom = 1.0f;
     // Create window and renderer
     if (!SDL_CreateWindowAndRenderer("Factory game", 640, 480, 0,
                                      &state->window, &state->renderer)) {
@@ -68,8 +68,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
         return SDL_APP_FAILURE;
     }
 
-    int w, h;
-    SDL_GetWindowSize(state->window, &w, &h);
 	state->ecs = ecs_init();  
 	if(!state->ecs) {
 		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "ecs_init() returned NULL");
@@ -82,8 +80,14 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 	ECS_SYSTEM(ecs, RenderSprite, EcsOnUpdate, Sprite, Position);
 	ecs_entity_t e = ecs_insert(ecs,
 		ecs_value(Sprite, {state->sampleImage, (SDL_FRect){0,0,100,100}}),
+		ecs_value(Position, {-100,0})
+	);
+	ecs_entity_t e2 = ecs_insert(ecs,
+		ecs_value(Sprite, {state->sampleImage, (SDL_FRect){0,0,100,100}}),
 		ecs_value(Position, {0,0})
 	);
+
+    SDL_GetWindowSize(state->window, &state->window_w, &state->window_h);
     return SDL_APP_CONTINUE;
 }
 
@@ -93,6 +97,18 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
     switch (event->type) {
         case SDL_EVENT_QUIT:
             return SDL_APP_SUCCESS;
+		case SDL_EVENT_WINDOW_RESIZED:
+			SDL_GetWindowSize(state->window, &state->window_w, &state->window_h);
+			break;
+		case SDL_EVENT_MOUSE_WHEEL:
+			state->cam.zoom-=event->wheel.y/10.0f;
+			break;
+		case SDL_EVENT_MOUSE_MOTION:
+			if (event->motion.state & SDL_BUTTON_LMASK) {
+				state->cam.x+= event->motion.xrel;
+				state->cam.y+= event->motion.yrel;
+			}
+			break;
         default:
             break;
     }
