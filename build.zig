@@ -27,7 +27,8 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addCSourceFiles(.{  
         .files = &.{
             "src/main.c",
-            "src/components.c"
+            "src/systems.c",
+            "src/input.c",
         },  
         .flags = &.{  
             "-std=c23",             "-Wall",  

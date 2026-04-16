@@ -10,4 +10,3 @@ typedef struct {
 	SDL_Texture *texture;
 	SDL_FRect rect;
 } Sprite;
-void RenderSprite(ecs_iter_t *it);

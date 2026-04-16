@@ -4,6 +4,7 @@
 #include <SDL3/SDL.h>
 #include "clay.h"
 #include "clay_renderer_SDL3.h"
+#include "input.h"
 typedef struct camera {
 	float x,y; // pos
 	float zoom;
@@ -18,5 +19,7 @@ typedef struct app_state {
 	//clay
 	Clay_SDL3RendererData clayRenderer;
 	void *clayMemory;
+	//input
+	InputState input;
 } AppState;
 #endif

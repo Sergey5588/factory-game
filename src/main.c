@@ -24,7 +24,8 @@ static const unsigned char s_font_roboto[] = {
 #define CLAY_SDL3_IMPLEMENTATION
 #include "app.h"
 #include "components.h"
-
+#include "systems.h"
+#include "input.h"
 
 static inline Clay_String Clay__FormatString(char *buf, int size, const char *fmt, ...) {  
     va_list args;  
@@ -36,9 +37,9 @@ static inline Clay_String Clay__FormatString(char *buf, int size, const char *fm
   
 #define CLAY_FSTRING(size, fmt, ...) \
     Clay__FormatString((char[size]){0}, size, fmt, ##__VA_ARGS__)
-// ----------------------------------------------------------------------------
-// STB image loading 
-// ----------------------------------------------------------------------------
+
+void Input_Process(AppState *state);
+
 SDL_Texture* STB_LoadTexture(SDL_Renderer* renderer, const char* filename, int* w, int* h) {
     int width, height, channels;
     unsigned char* pixels = stbi_load(filename, &width, &height, &channels, STBI_rgb_alpha);
@@ -85,6 +86,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to load image");
         return SDL_APP_FAILURE;
     }
+
+
 	state->ecs = ecs_init();  
 	if(!state->ecs) {
 		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "ecs_init() returned NULL");
@@ -104,7 +107,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 		ecs_value(Position, {0,0})
 	);
 
-    SDL_GetWindowSize(state->window, &state->window_w, &state->window_h);
+    SDL_GetWindowSizeInPixels(state->window, &state->window_w, &state->window_h);
 	    static Clay_STB_Font clay_fonts[] = {  
         { s_font_roboto, sizeof(s_font_roboto) },   // fontId = 0  
     };  
@@ -128,35 +131,15 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
     AppState *state = (AppState*)appstate;
-
+	Input_HandleEvent(&state->input, event);
     switch (event->type) {
         case SDL_EVENT_QUIT:
             return SDL_APP_SUCCESS;
 		case SDL_EVENT_WINDOW_EXPOSED:
-			SDL_AppIterate(state);
 			break;
 		case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
 			state->window_w = event->window.data1;
 			state->window_h = event->window.data2;
-			break;
-		case SDL_EVENT_MOUSE_WHEEL:
-			if(state->cam.zoom > 0.09)
-				state->cam.zoom-=event->wheel.y/10.0f; // 0.1 or -0.1
-			if(state->cam.zoom <= 0.1) {
-				state->cam.zoom = 0.1;
-			}
-			break;
-		case SDL_EVENT_MOUSE_MOTION:
-			if (event->motion.state & SDL_BUTTON_LMASK) {
-				state->cam.x+= event->motion.xrel;
-				state->cam.y+= event->motion.yrel;
-			}
-			break;
-		case SDL_EVENT_KEY_DOWN:  
-			if (event->key.key == SDLK_F11) {  
-				bool is_fullscreen = (SDL_GetWindowFlags(state->window) & SDL_WINDOW_FULLSCREEN) != 0;  
-				SDL_SetWindowFullscreen(state->window, !is_fullscreen);  
-			}  
 			break;
         default:
             break;
@@ -166,6 +149,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 
 SDL_AppResult SDL_AppIterate(void *appstate) {
     AppState *state = (AppState*)appstate;
+	Input_Process(state);
 	//clay UI
 	Clay_SetLayoutDimensions((Clay_Dimensions){ state->window_w, state->window_h });  
     Clay_BeginLayout();  
@@ -178,7 +162,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 	})
 	 {  
         CLAY_TEXT(  
-            CLAY_FSTRING(64,"resolution: %d %d", state->window_w, state->window_h),  
+            CLAY_FSTRING(64,"Camera pos: %f %f\nzoom: %f", state->cam.x, state->cam.y, state->cam.zoom),  
             CLAY_TEXT_CONFIG({  
                 .fontId    = FONT_ID,  
                 .fontSize  = 24,  
@@ -194,6 +178,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 	Clay_RenderCommandArray clay_cmds = Clay_EndLayout(0);  
     SDL_Clay_RenderClayCommands(&state->clayRenderer, &clay_cmds);
     SDL_RenderPresent(state->renderer);
+	Input_BeginFrame(&state->input);
     return SDL_APP_CONTINUE;
 }
 
@@ -211,4 +196,16 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
 		if (state->clayMemory) SDL_free(state->clayMemory);
         SDL_free(state);
     }
+}
+void Input_Process(AppState *state) {
+    if (state->input.actions[ACTION_TOGGLE_FULLSCREEN].pressed) {  
+        bool fs = (SDL_GetWindowFlags(state->window) & SDL_WINDOW_FULLSCREEN) != 0;  
+        SDL_SetWindowFullscreen(state->window, !fs);  
+    }  
+    if (state->input.actions[ACTION_PAN].held) {  
+        state->cam.x += state->input.mouse_dx;  
+        state->cam.y += state->input.mouse_dy;  
+    }  
+    state->cam.zoom -= state->input.scroll_y * 0.1f;  
+    if (state->cam.zoom < 0.1f) state->cam.zoom = 0.1f;  
 }
