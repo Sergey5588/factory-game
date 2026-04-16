@@ -2,8 +2,8 @@
 #define APP_H
 #include <flecs.h>
 #include <SDL3/SDL.h>
-
-
+#include "clay.h"
+#include "clay_renderer_SDL3.h"
 typedef struct camera {
 	float x,y; // pos
 	float zoom;
@@ -15,5 +15,8 @@ typedef struct app_state {
     SDL_Texture *sampleImage;
 	ecs_world_t *ecs;
 	Camera cam;
+	//clay
+	Clay_SDL3RendererData clayRenderer;
+	void *clayMemory;
 } AppState;
 #endif

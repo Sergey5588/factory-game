@@ -3,13 +3,12 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL.h>
 #define CLAY_IMPLEMENTATION
-#include "clay.h"
+#include <clay.h>
 
 #include <flecs.h>
 #undef ECS_ALIGNOF  
 #define ECS_ALIGNOF(T) ((int64_t)_Alignof(T))
 #include <stdio.h>
-#include "clay_renderer_SDL3.h"
 // ----------------------------------------------------------------------------
 // Constants and types
 // ----------------------------------------------------------------------------
@@ -18,6 +17,11 @@ static const Clay_Color COLOR_ORANGE = (Clay_Color){225, 138, 50, 255};
 static const Clay_Color COLOR_BLUE   = (Clay_Color){111, 173, 162, 255};
 static const Clay_Color COLOR_LIGHT  = (Clay_Color){224, 215, 210, 255};
 
+
+static const unsigned char s_font_roboto[] = {  
+#embed "static/RobotoMono.ttf"  
+};
+#define CLAY_SDL3_IMPLEMENTATION
 #include "app.h"
 #include "components.h"
 // ----------------------------------------------------------------------------
@@ -88,6 +92,24 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 	);
 
     SDL_GetWindowSize(state->window, &state->window_w, &state->window_h);
+	    static Clay_STB_Font clay_fonts[] = {  
+        { s_font_roboto, sizeof(s_font_roboto) },   // fontId = 0  
+    };  
+    state->clayRenderer = (Clay_SDL3RendererData){  
+        .renderer   = state->renderer,  
+        .fonts      = clay_fonts,  
+        .num_fonts  = 1,  
+        .num_atlases = 0,  
+    };  
+  
+    uint64_t clay_mem_size = Clay_MinMemorySize();  
+    state->clayMemory = SDL_malloc(clay_mem_size);  
+    Clay_Arena clay_arena = Clay_CreateArenaWithCapacityAndMemory(  
+        clay_mem_size, state->clayMemory);  
+    Clay_Initialize(clay_arena,  
+        (Clay_Dimensions){ state->window_w, state->window_h },  
+        (Clay_ErrorHandler){ NULL });  
+    Clay_SetMeasureTextFunction(Clay_STB_MeasureText, &state->clayRenderer);
     return SDL_APP_CONTINUE;
 }
 
@@ -117,13 +139,33 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 
 SDL_AppResult SDL_AppIterate(void *appstate) {
     AppState *state = (AppState*)appstate;
-
-
+	//clay UI
+	Clay_SetLayoutDimensions((Clay_Dimensions){ state->window_w, state->window_h });  
+    Clay_BeginLayout();  
+	CLAY(CLAY_ID("TopBar"), {  
+		.layout = {  
+			.sizing  = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIT(0) },  
+			.padding = CLAY_PADDING_ALL(8),  
+		},  
+		.backgroundColor = (Clay_Color){ 30, 30, 30, 200 },  
+	})
+	 {  
+        CLAY_TEXT(  
+            CLAY_STRING("Factory Game"),  
+            CLAY_TEXT_CONFIG({  
+                .fontId    = FONT_ID,  
+                .fontSize  = 20,  
+                .textColor = COLOR_LIGHT,  
+            })  
+        );  
+    }  
     // Clear screen
     SDL_SetRenderDrawColor(state->renderer, 0, 0, 0, 255);
     SDL_RenderClear(state->renderer);
 
 	ecs_progress(state->ecs, 0);
+	Clay_RenderCommandArray clay_cmds = Clay_EndLayout(0);  
+    SDL_Clay_RenderClayCommands(&state->clayRenderer, &clay_cmds);
     SDL_RenderPresent(state->renderer);
     return SDL_APP_CONTINUE;
 }

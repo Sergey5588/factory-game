@@ -30,7 +30,7 @@ pub fn build(b: *std.Build) void {
             "src/components.c"
         },  
         .flags = &.{  
-            "-std=c17",             "-Wall",  
+            "-std=c23",             "-Wall",  
             "-Wextra",              "-Wno-unused-variable",  
             "-Wno-sign-compare",    "-Wno-missing-field-initializers",  
             "-Wno-unused-parameter",  
